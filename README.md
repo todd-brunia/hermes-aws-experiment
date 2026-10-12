@@ -19,6 +19,17 @@ The default is `t4g.small` (2 GiB), Amazon Linux 2023, a 20 GiB encrypted gp3 ro
 
 This is a low-cost starting point, not a claim that EC2 is the cheapest possible AWS product. Estimate your regional EC2, EBS, IPv4, and transfer costs with the [AWS Pricing Calculator](https://calculator.aws/). [Public IPv4](https://aws.amazon.com/vpc/pricing/) is billed separately; [EC2 Linux on-demand](https://aws.amazon.com/ec2/pricing/on-demand/) is billed while running. OpenAI usage is separate. A 1 GiB `t4g.micro` may work with a reduced workload but has less memory headroom; browser-heavy work needs more RAM. Stopping EC2 retains billable storage; destroying the runtime removes it.
 
+For `us-east-1`, the October 12, 2026 planning estimate at 730 hours/month is:
+
+| Item | Rate | Monthly estimate |
+| --- | --- | --- |
+| Linux `t4g.small` | $0.0168/hour (verified against AWS Price List API) | $12.26 |
+| Public IPv4 | $0.005/hour | $3.65 |
+| 20 GiB gp3 | $0.08/GiB-month | $1.60 |
+| Total baseline | Before tax, S3 requests/storage, transfer, and OpenAI | **$17.52** |
+
+Expect about $18/month for continuous hosting with little traffic. Compute plus IPv4 costs about $0.52/day when deployed; disk storage is prorated for the time it exists. State storage is small but retained after teardown. No free-tier credits, discounts, or paid AWS Support plan are assumed. Recheck rates before provisioning. OpenAI costs depend on tokens and model choice; hosting does not include model inference.
+
 ## Prerequisites
 
 - An AWS Organizations member account, administrator access for provisioning, and an AWS CLI v2 login. Use a dedicated experimental member account, not the management account, for the server.
@@ -71,7 +82,7 @@ python3 scripts/set-openai-key.py \
   --region us-east-1
 ```
 
-This stores a Standard SSM SecureString encrypted by the AWS-managed SSM key. It verifies the caller's account and sends the secret through stdin. Terraform never reads or owns the secret value, and the runtime role can fetch only the exact configured parameter. Do not paste the key into chat, a shell command, `.tfvars`, GitHub secrets, or issues. The parameter survives runtime teardown. Changing `openai_key_parameter` requires saving your key at that alternate path using your own secure procedure.
+This stores a Standard SSM SecureString encrypted by the AWS-managed SSM key. It verifies the caller's account and passes the request through a short-lived owner-only file in an owner-only temporary directory, removing it after the command. The key never appears in process arguments or console output. Terraform never reads or owns the secret value, and the runtime role can fetch only the exact configured parameter. Do not paste the key into chat, a shell command, `.tfvars`, GitHub secrets, or issues. The parameter survives runtime teardown. Changing `openai_key_parameter` requires saving your key at that alternate path using your own secure procedure.
 
 ### 4. Pin Hermes and provision
 
