@@ -13,6 +13,7 @@ parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--profile", required=True)
 parser.add_argument("--region", default="us-east-1")
 parser.add_argument("--account-id", required=True)
+parser.add_argument("--from-clipboard", action="store_true", help="macOS: read the copied key with pbpaste instead of the hidden prompt")
 args = parser.parse_args()
 identity = subprocess.run(
     ["aws", "sts", "get-caller-identity", "--profile", args.profile],
@@ -20,7 +21,13 @@ identity = subprocess.run(
 )
 if json.loads(identity.stdout)["Account"] != args.account_id:
     raise SystemExit("Wrong AWS account; no parameter written.")
-key = getpass.getpass("OpenAI project service-account key: ").strip()
+if args.from_clipboard:
+    try:
+        key = subprocess.run(["pbpaste"], check=True, capture_output=True, text=True).stdout.strip()
+    except (OSError, subprocess.CalledProcessError):
+        raise SystemExit("Could not read the macOS clipboard. Use the hidden prompt instead.")
+else:
+    key = getpass.getpass("OpenAI project service-account key: ").strip()
 if not key.startswith("sk-") or any(c.isspace() for c in key):
     raise SystemExit("Expected an OpenAI secret key without whitespace.")
 # AWS CLI distributions differ in how they read /dev/stdin. Use a short-lived

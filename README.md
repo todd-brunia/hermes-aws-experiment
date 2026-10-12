@@ -82,6 +82,8 @@ python3 scripts/set-openai-key.py \
   --region us-east-1
 ```
 
+On macOS, if your terminal's password manager interferes with the hidden prompt, copy the key and add `--from-clipboard` to the command. The script reads it locally with `pbpaste` and never prints it. Copy something else afterward to replace the key in your clipboard.
+
 This stores a Standard SSM SecureString encrypted by the AWS-managed SSM key. It verifies the caller's account and passes the request through a short-lived owner-only file in an owner-only temporary directory, removing it after the command. The key never appears in process arguments or console output. Terraform never reads or owns the secret value, and the runtime role can fetch only the exact configured parameter. Do not paste the key into chat, a shell command, `.tfvars`, GitHub secrets, or issues. The parameter survives runtime teardown. Changing `openai_key_parameter` requires saving your key at that alternate path using your own secure procedure.
 
 ### 4. Pin Hermes and provision
