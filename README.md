@@ -2,7 +2,7 @@
 
 A small, forkable Terraform experiment for [Nous Research Hermes Agent](https://github.com/NousResearch/hermes-agent). Run the official Docker image on one ARM EC2 instance, use your own OpenAI API project, and remove the server when you finish. MIT licensed; no account credentials belong in this repository.
 
-The first version provides an interactive CLI through AWS Session Manager. Telegram, Bedrock, GitHub, and delivery-orchestrator integration are future extensions.
+The first version provides an interactive CLI and an optional web dashboard through AWS Session Manager. Telegram, Bedrock, GitHub, and delivery-orchestrator integration are future extensions.
 
 ```mermaid
 flowchart LR
@@ -115,7 +115,26 @@ sudo docker exec -it hermes hermes chat
 
 Ask a short question to verify OpenAI connectivity. The container stays idle between CLI sessions. The provider is explicitly `openai-api`, with the OpenAI endpoint, and there is no configured fallback provider. Hermes data is under `/srv/hermes` and mounted at `/opt/data`. The [official Docker guide](https://hermes-agent.nousresearch.com/docs/user-guide/docker) documents the runtime ownership and container commands; the [provider guide](https://hermes-agent.nousresearch.com/docs/integrations/providers) documents OpenAI and Bedrock.
 
-### 5. Deprovision and reprovision
+### 5. Optional web dashboard
+
+With your member-account AWS profile active, run:
+
+```bash
+bash scripts/stack.sh dashboard-setup
+bash scripts/stack.sh dashboard
+```
+
+The installer restarts the container while retaining `/srv/hermes`, enables the official dashboard, and generates a password on the server. It publishes port 9119 only on the host's loopback address; no public inbound rule is added. The tunnel command maps your Mac/Linux computer's local port 9119 to the server through AWS Session Manager. Keep it running and open [http://localhost:9119](http://localhost:9119).
+
+Username: `hermes`. To view the generated password, use a separate terminal to run `bash scripts/stack.sh connect`, then run this **inside the server shell**:
+
+```bash
+sudo sed -n 's/^HERMES_DASHBOARD_BASIC_AUTH_PASSWORD=//p' /srv/hermes/dashboard.env
+```
+
+The dashboard installer is an optional post-provisioning step; run it again after runtime teardown/reprovisioning. It preserves the password on ordinary restarts and generates a new one for a fresh server. Your local port must be available, and the Session Manager plugin must be installed. The dashboard does not add AWS resources or change the hosting estimate. It can change Hermes configuration, so keep its login private. The API server on port 8642 stays disabled.
+
+### 6. Deprovision and reprovision
 
 ```bash
 export AWS_PROFILE=your-member-account-profile

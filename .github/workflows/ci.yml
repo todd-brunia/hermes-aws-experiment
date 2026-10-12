@@ -25,7 +25,8 @@ jobs:
       - name: Validate scripts
         run: |
           bash -n scripts/stack.sh
-          python3 -m py_compile scripts/set-openai-key.py
+          bash -n scripts/enable-dashboard-host.sh
+          python3 -m py_compile scripts/set-openai-key.py scripts/configure-dashboard.py
       - name: Check Terraform host template
         working-directory: infra/bootstrap
         run: |
