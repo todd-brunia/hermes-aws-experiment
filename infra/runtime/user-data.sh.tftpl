@@ -1,0 +1,48 @@
+#!/bin/bash
+set -euo pipefail
+umask 077
+dnf install -y docker
+systemctl enable --now docker amazon-ssm-agent
+install -d -m 0700 -o 10000 -g 10000 /srv/hermes
+cat > /srv/hermes/config.yaml <<'CONFIG'
+model:
+  provider: openai-api
+  default: ${model}
+  base_url: https://api.openai.com/v1
+terminal:
+  backend: local
+CONFIG
+chown 10000:10000 /srv/hermes/config.yaml
+cat > /usr/local/sbin/start-hermes <<'START'
+#!/bin/bash
+set -euo pipefail
+umask 077
+key=$(aws ssm get-parameter --region '${region}' --name '${parameter}' --with-decryption --query Parameter.Value --output text)
+printf 'OPENAI_API_KEY=%s\n' "$key" > /srv/hermes/.env
+unset key
+chmod 0600 /srv/hermes/.env
+chown 10000:10000 /srv/hermes/.env
+docker pull '${image}'
+exec docker run --name hermes --rm --log-opt max-size=10m --log-opt max-file=2 \
+  --security-opt no-new-privileges --memory=1400m --pids-limit=512 \
+  -v /srv/hermes:/opt/data '${image}' sleep infinity
+START
+chmod 0700 /usr/local/sbin/start-hermes
+cat > /etc/systemd/system/hermes.service <<'UNIT'
+[Unit]
+Description=Hermes experimental CLI container
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=0
+[Service]
+ExecStart=/usr/local/sbin/start-hermes
+ExecStop=/usr/bin/docker stop hermes
+Restart=always
+RestartSec=30
+TimeoutStartSec=0
+[Install]
+WantedBy=multi-user.target
+UNIT
+systemctl daemon-reload
+systemctl enable --now hermes

@@ -1,0 +1,5 @@
+bucket       = "replace-with-your-state-bucket"
+key          = "hermes-experiment/runtime.tfstate"
+region       = "us-east-1"
+encrypt      = true
+use_lockfile = true

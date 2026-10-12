@@ -1,0 +1,35 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
+        with:
+          terraform_version: 1.15.8
+          terraform_wrapper: false
+      - run: terraform fmt -check -recursive infra
+      - name: Validate Terraform without AWS credentials
+        run: |
+          for root in infra/account infra/bootstrap infra/runtime; do
+            terraform -chdir="$root" init -backend=false -input=false -lockfile=readonly
+            terraform -chdir="$root" validate
+          done
+      - name: Validate scripts
+        run: |
+          bash -n scripts/stack.sh
+          python3 -m py_compile scripts/set-openai-key.py
+      - name: Check Terraform host template
+        working-directory: infra/bootstrap
+        run: |
+          terraform console -var='aws_account_id=123456789012' -var='state_bucket_name=example-state-bucket' <<'EOF' | python3 -c 'import json,sys; print(json.loads(json.load(sys.stdin)),end="")' > /tmp/hermes-user-data.sh
+          jsonencode(templatefile("../runtime/user-data.sh.tftpl", {region="us-east-1", parameter="/hermes-experiment/openai-api-key", image="nousresearch/hermes-agent@sha256:0000000000000000000000000000000000000000000000000000000000000000", model="example-model"}))
+          EOF
+          bash -n /tmp/hermes-user-data.sh

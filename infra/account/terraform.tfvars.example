@@ -1,0 +1,10 @@
+management_account_id = "123456789012"
+account_email         = "your-unique-aws-account-email@example.com"
+account_name          = "hermes-experiment"
+# Optional: reuse an existing IAM Identity Center permission set/principal.
+# portal_assignment = {
+#   instance_arn       = "arn:aws:sso:::instance/ssoins-REPLACE"
+#   permission_set_arn = "arn:aws:sso:::permissionSet/ssoins-REPLACE/ps-REPLACE"
+#   principal_id       = "REPLACE_WITH_USER_OR_GROUP_ID"
+#   principal_type     = "GROUP"
+# }
